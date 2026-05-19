@@ -1,5 +1,7 @@
+require('dotenv').config();
 const express = require('express');
 const morgan = require('morgan');
+const Person = require('./models/person');
 
 const app = express();
 
@@ -44,17 +46,20 @@ app.get('/info', (req, res) => {
 });
 
 app.get('/api/persons', (req, res) => {
-    res.json(persons);
+    Person.find({}).then(persons => {
+        res.json(persons);
+    });
 });
 
 app.get('/api/persons/:id', (req, res) => {
     const id = req.params.id;
-    const person = persons.find(person => person.id === id);
-    if (person) {
-        res.status(200).json(person);
-    } else {
-        res.status(404).end();
-    }
+    Person.findById(id).then(person => {
+        if (person) {
+            res.status(200).json(person);
+        } else {
+            res.status(404).end();
+        }
+    });
 });
 
 app.delete('/api/persons/:id', (req, res) => {
@@ -70,27 +75,32 @@ const generateId = () => {
 };
 
 app.post('/api/persons', (req, res) => {
-    const person = req.body;
-    if (!person || !person.name || !person.number) {
+    const body = req.body;
+    if (!body || !body.name || !body.number) {
         return res.status(400).json({
             error: 'name or number missing'
         });
     }
-    if (persons.find(p => p.name === person.name)) {
+    if (persons.find(p => p.name === body.name)) {
         return res.status(400).json({
             error: 'name must be unique'
         });
     }
-    const newPerson = {
-        id: generateId(),
-        name: person.name,
-        number: person.number
-    };
-    persons = persons.concat(newPerson);
-    res.status(201).json(newPerson);
+
+    const person = new Person({
+        name: body.name,
+        number: body.number
+    });
+
+    person.save().then(savedPerson => {
+        res.status(201).json(savedPerson);
+    }).catch(error => {
+        console.error('Error saving person:', error.message);
+        res.status(500).json({ error: 'Internal server error' });
+    });
 });
 
-const port = process.env.PORT || 3001;
+const port = process.env.PORT;
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
 });
