@@ -48,10 +48,7 @@ app.delete('/api/persons/:id', (req, res) => {
     Person.findByIdAndDelete(id).then(() => {
         res.status(204).end();
     })
-        .catch(error => {
-            console.error('Error deleting person:', error.message);
-            res.status(500).json({ error: 'Internal server error' });
-        });
+        .catch(error => next(error));
 });
 
 
@@ -81,6 +78,35 @@ app.post('/api/persons', (req, res) => {
         console.error('Error saving person:', error.message);
         res.status(500).json({ error: 'Internal server error' });
     });
+});
+
+app.put('/api/persons/:id', (req, res) => {
+    const id = req.params.id;
+    const body = req.body;
+
+    if (!body || !body.name || !body.number) {
+        return res.status(400).json({
+            error: 'name or number missing'
+        });
+    }
+
+    const person = {
+        name: body.name,
+        number: body.number
+    };
+
+    Person.findByIdAndUpdate(id, person, { new: true })
+        .then(updatedPerson => {
+            if (updatedPerson) {
+                res.json(updatedPerson);
+            } else {
+                res.status(404).end();
+            }
+        })
+        .catch(error => {
+            console.error('Error updating person:', error.message);
+            res.status(500).json({ error: 'Internal server error' });
+        });
 });
 
 const port = process.env.PORT;
